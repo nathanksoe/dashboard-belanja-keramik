@@ -374,7 +374,7 @@ let selectedAreaManager = 'ALL';
 let selectedStore = 'ALL';
 let trendChart, sizeCompareChart, ctOnlyChart, areaManagerChart, map, markerLayer;
 const UPDATE_PASSWORD = '123qweasd';
-const SUPABASE_URL = ' https://qjmmeyosqqlivxqptzii.supabase.co';
+const SUPABASE_URL = 'https://qjmmeyosqqlivxqptzii.supabase.co';
 const SUPABASE_ANON_KEY = 'sb_publishable_dCESC9Bipago1pgTlFotJA_MR1PZUSE';
 const SNAPSHOT_META_KEY = 'active_snapshot';
 const supabaseClient = (window.supabase && SUPABASE_URL !== 'YOUR_SUPABASE_URL_HERE' && SUPABASE_ANON_KEY !== 'YOUR_SUPABASE_PUBLISHABLE_KEY_HERE')
@@ -424,6 +424,82 @@ function unlockAdminPanel() {
 function lockAdminPanel() {
   adminUnlocked = false;
   syncAdminLockUI();
+}
+
+function hasSupabaseConfig() {
+  return !!supabaseClient;
+}
+
+function resetSelectionsAndRedraw() {
+  selectedArea = 'ALL';
+  selectedAreaManager = 'ALL';
+  selectedStore = 'ALL';
+  selectedCategory = 'CTGT - SQM';
+  PROCESSED_STATE = extractStateFromData(DATA);
+  refreshHeaderMeta();
+  updateDashboard();
+}
+
+async function loadLiveSnapshotFromSupabase(silent=false) {
+  const statusEl = document.getElementById('uploadSessionStatus');
+  if (!hasSupabaseConfig()) {
+    if (!silent) alert('Supabase is not configured yet.');
+    return false;
+  }
+  try {
+    if (statusEl) statusEl.textContent = 'Loading live snapshot from Supabase...';
+    const { data, error } = await supabaseClient
+      .from('dashboard_meta')
+      .select('value')
+      .eq('key', SNAPSHOT_META_KEY)
+      .maybeSingle();
+    if (error) throw error;
+    if (!data || !data.value) {
+      if (statusEl) statusEl.textContent = 'No live snapshot found. Using bundled snapshot.';
+      return false;
+    }
+    const parsed = JSON.parse(data.value);
+    if (!parsed || !parsed.meta || !parsed.categoryData) throw new Error('Invalid snapshot JSON');
+    DATA = parsed;
+    resetSelectionsAndRedraw();
+    if (statusEl) statusEl.textContent = 'Live snapshot loaded from Supabase';
+    return true;
+  } catch (err) {
+    console.error(err);
+    if (statusEl) statusEl.textContent = 'Failed to load live snapshot';
+    if (!silent) alert('Failed to load the live snapshot from Supabase.');
+    return false;
+  }
+}
+
+async function publishLiveSnapshotToSupabase() {
+  if (!adminUnlocked) { alert('Update panel is locked.'); return; }
+  const statusEl = document.getElementById('uploadSessionStatus');
+  const btn = document.getElementById('publishLiveBtn');
+  if (!hasSupabaseConfig()) {
+    alert('Supabase is not configured yet.');
+    return;
+  }
+  try {
+    if (btn) { btn.disabled = true; btn.textContent = 'Publishing...'; }
+    if (statusEl) statusEl.textContent = 'Publishing live snapshot to Supabase...';
+    const { error } = await supabaseClient
+      .from('dashboard_meta')
+      .upsert({
+        key: SNAPSHOT_META_KEY,
+        value: JSON.stringify(DATA),
+        updated_at: new Date().toISOString()
+      }, { onConflict: 'key' });
+    if (error) throw error;
+    if (statusEl) statusEl.textContent = 'Live snapshot published to Supabase';
+    alert('Success: the latest dashboard snapshot is now saved in Supabase.');
+  } catch (err) {
+    console.error(err);
+    if (statusEl) statusEl.textContent = 'Publish failed';
+    alert('Failed to publish the live snapshot to Supabase.');
+  } finally {
+    if (btn) { btn.disabled = false; btn.textContent = 'Publish Live'; }
+  }
 }
 
 
