@@ -3,11 +3,12 @@
 <head>
 <meta charset="utf-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1"/>
-<title>Belanja Keramik Daily Dashboard - Updatable</title>
+<title>Belanja Keramik Daily Dashboard - Supabase Ready</title>
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin=""/>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.3/dist/chart.umd.min.js"></script>
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
 <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <style>
 :root {
   --bg:#f5f7fb;
@@ -205,8 +206,10 @@ tbody tr:hover{background:#fafcff;}
       </div>
       <div class="upload-actions">
         <button class="btn btn-secondary" id="rebuildUploadsBtn">Rebuild Dashboard</button>
+        <button class="btn btn-secondary" id="publishLiveBtn">Publish Live</button>
+        <button class="btn btn-ghost" id="loadLiveBtn">Load Live Snapshot</button>
         <button class="btn btn-ghost" id="resetBundledBtn">Reset to Bundled Snapshot</button>
-        <div class="note">Lookup files for store locations and area managers remain embedded in this HTML.</div>
+        <div class="note" id="supabaseHint">After you rebuild the dashboard, click Publish Live to save the latest snapshot to Supabase. Viewers opening the Vercel link will then see the same updated version.</div>
       </div>
     </div>
   </div></div>
@@ -371,6 +374,12 @@ let selectedAreaManager = 'ALL';
 let selectedStore = 'ALL';
 let trendChart, sizeCompareChart, ctOnlyChart, areaManagerChart, map, markerLayer;
 const UPDATE_PASSWORD = '123qweasd';
+const SUPABASE_URL = ' https://qjmmeyosqqlivxqptzii.supabase.co';
+const SUPABASE_ANON_KEY = 'sb_publishable_dCESC9Bipago1pgTlFotJA_MR1PZUSE';
+const SNAPSHOT_META_KEY = 'active_snapshot';
+const supabaseClient = (window.supabase && SUPABASE_URL !== 'YOUR_SUPABASE_URL_HERE' && SUPABASE_ANON_KEY !== 'YOUR_SUPABASE_PUBLISHABLE_KEY_HERE')
+  ? window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY)
+  : null;
 let adminUnlocked = false;
 
 function syncAdminLockUI() {
@@ -1229,7 +1238,7 @@ async function rebuildFromUploads() {
     selectedStore = 'ALL';
     selectedCategory = 'CTGT - SQM';
     updateDashboard();
-    sessionStatus.textContent = 'Updated in current browser session';
+    sessionStatus.textContent = 'Updated in current browser session · not yet published';
   } catch (err) {
     console.error(err);
     alert('Failed to rebuild dashboard from the uploaded files. Please check the file format and try again.');
@@ -1261,6 +1270,8 @@ PROCESSED_STATE = extractStateFromData(DATA);
 refreshHeaderMeta();
 ['actual','lm','ly','target'].forEach(k => document.getElementById(`${k}Upload`).addEventListener('change', updateUploadStatuses));
 document.getElementById('rebuildUploadsBtn').addEventListener('click', rebuildFromUploads);
+document.getElementById('publishLiveBtn').addEventListener('click', publishLiveSnapshotToSupabase);
+document.getElementById('loadLiveBtn').addEventListener('click', () => loadLiveSnapshotFromSupabase(false));
 document.getElementById('resetBundledBtn').addEventListener('click', resetToBundledSnapshot);
 document.getElementById('unlockUpdateBtn').addEventListener('click', unlockAdminPanel);
 document.getElementById('lockUpdateBtn').addEventListener('click', lockAdminPanel);
@@ -1269,6 +1280,7 @@ initMap();
 updateUploadStatuses();
 syncAdminLockUI();
 updateDashboard();
+loadLiveSnapshotFromSupabase(true);
 </script>
 </body>
 </html>
