@@ -1181,9 +1181,15 @@ async function parseTargetWorkbook(file, targetMonthLabel) {
   for (let row = 4; row <= 180; row++) {
     for (const [catName, cfg] of Object.entries(blocks)) {
       const code = String(cellv(cfg.codeCol, row) || '').trim();
-      if (!code) continue;
-      const val = toNumber(cellv(cfg.monthStartCol + monthIdx, row));
-      result.categories[catName][code] = val;
+const name = String(cellv(cfg.nameCol, row) || '').trim();
+
+if (!code) continue;
+
+// skip total rows
+if (/^grand\s*total$/i.test(code) || /^grand\s*total$/i.test(name)) continue;
+
+const val = toNumber(cellv(cfg.monthStartCol + monthIdx, row));
+result.categories[catName][code] = val;
     }
   }
   return result;
