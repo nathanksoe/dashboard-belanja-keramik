@@ -1145,7 +1145,12 @@ async function parseTransactionWorkbook(file, role, compareDay) {
         }
       }
     }
-    if (prod === 'Sanitary Ware' || prod === 'Sanitary ware' || prod === 'Fitting') add('SW + Fitting - PCS', qtyUnit, true);
+    if (
+  prod === 'Sanitary Ware' ||
+  prod === 'Sanitary ware' ||
+  prod === 'Sanitary Cabinet' ||
+  prod === 'Fitting'
+) add('SW + Fitting - PCS', qtyUnit, true);
     if (prod === 'Tiles Vinyl') add('Vinyl - SQM', qtyM2, true);
     if (prod === 'Adhesive' || prod === 'TILE GROUT') add('Adhesive - PCS/BAG', qtyUnit, true);
   });
